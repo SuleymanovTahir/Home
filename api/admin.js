@@ -1,5 +1,4 @@
-import { randomUUID } from 'node:crypto';
-import { put } from '@vercel/blob';
+import { head } from '@vercel/blob';
 import {
   clearSessionCookie,
   createSessionCookie,
@@ -12,7 +11,6 @@ import {
   saveCatalog,
 } from '../lib/catalog.js';
 
-const MAX_MODEL_BYTES = 3 * 1024 * 1024;
 const attempts = new Map();
 
 export default {
@@ -38,7 +36,7 @@ export default {
 
     try {
       const catalog = await readCatalog();
-      if (body.action === 'upload') return uploadModel(catalog, body);
+      if (body.action === 'register-upload') return registerUploadedModel(catalog, body);
       if (body.action === 'rename') return renameModel(catalog, body);
       if (body.action === 'toggle') return toggleModel(catalog, body);
       if (body.action === 'reorder') return reorderModels(catalog, body);
@@ -83,35 +81,40 @@ function login(request, password) {
   return json({ ok: true }, 200, { 'Set-Cookie': createSessionCookie() });
 }
 
-async function uploadModel(catalog, body) {
+async function registerUploadedModel(catalog, body) {
   if (typeof body.title !== 'string' || !body.title.trim() || body.title.trim().length > 100) {
     return json({ error: 'INVALID_TITLE' }, 400);
   }
-  if (typeof body.content !== 'string' || !/^[A-Za-z0-9+/]+={0,2}$/.test(body.content)) {
+  if (typeof body.description !== 'string' || body.description.length > 180) {
+    return json({ error: 'INVALID_DESCRIPTION' }, 400);
+  }
+
+  const match = /^models\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.html$/i.exec(body.pathname ?? '');
+  if (!match) {
     return json({ error: 'INVALID_FILE' }, 400);
   }
 
-  const bytes = Buffer.from(body.content, 'base64');
-  if (!bytes.length || bytes.length > MAX_MODEL_BYTES) return json({ error: 'FILE_TOO_LARGE' }, 413);
-
-  const html = bytes.toString('utf8');
-  if (!/<\s*html(?:\s|>)/i.test(html) || !/<\/\s*html\s*>/i.test(html)) {
-    return json({ error: 'HTML_REQUIRED' }, 400);
+  const id = match[1];
+  const storagePath = body.pathname;
+  if (catalog.models.some((item) => item.id === id || item.storagePath === storagePath)) {
+    return json({ error: 'MODEL_ALREADY_EXISTS' }, 409);
   }
 
-  const id = randomUUID();
-  const storagePath = `models/${id}.html`;
-  await put(storagePath, new Blob([html], { type: 'text/html; charset=utf-8' }), {
-    access: 'private',
-    addRandomSuffix: false,
-    contentType: 'text/html; charset=utf-8',
-    cacheControlMaxAge: 31_536_000,
-  });
+  let blob;
+  try {
+    blob = await head(storagePath);
+  } catch {
+    return json({ error: 'UPLOAD_NOT_FOUND' }, 404);
+  }
+  if (!blob.contentType?.toLowerCase().startsWith('text/html')) {
+    await deleteModelBlob(storagePath).catch(() => {});
+    return json({ error: 'HTML_REQUIRED' }, 400);
+  }
 
   catalog.models.push({
     id,
     title: body.title.trim(),
-    description: typeof body.description === 'string' ? body.description.trim().slice(0, 180) : 'Загруженная модель',
+    description: body.description.trim().slice(0, 180) || 'Загруженная модель',
     storagePath,
     hidden: false,
     order: catalog.models.length,

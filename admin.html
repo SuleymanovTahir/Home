@@ -41,6 +41,8 @@
     .model-meta{margin-top:3px;color:var(--muted);font-size:12px}
     .actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
     .actions button{min-width:42px;padding:7px 10px}
+    .actions .icon-button{display:grid;place-items:center;width:42px;min-width:42px;padding:7px}
+    .icon-button svg{display:block;width:19px;height:19px}
     .setup{border-color:#c7a958;background:#fff9e7}
     .setup h2{font-size:18px}
     .setup ol{padding-left:22px;color:var(--fg)}
@@ -85,7 +87,7 @@
       </div>
       <section class="card upload">
         <h2>Добавить модель</h2>
-        <p class="hint">Загрузите отдельный HTML-файл размером до 3 МБ. Он сразу появится в каталоге.</p>
+        <p class="hint">Загрузите HTML-файл модели. После загрузки он появится в каталоге.</p>
         <button class="primary" id="choose-file" type="button" style="margin-top:14px">Загрузить новую модель</button>
         <input id="file" type="file" accept=".html,text/html" hidden>
         <form id="upload-form" class="upload-fields" hidden>
@@ -105,6 +107,7 @@
     </section>
   </main>
 
+  <script src="./blob-upload.bundle.js"></script>
   <script>
     const loginPanel = document.querySelector('#login-panel');
     const dashboard = document.querySelector('#dashboard');
@@ -183,7 +186,7 @@
         actions.append(
           actionButton('↑', 'Поднять выше', () => moveModel(index, -1), index === 0),
           actionButton('↓', 'Опустить ниже', () => moveModel(index, 1), index === models.length - 1),
-          actionButton('Переименовать', `Переименовать модель «${model.title}»`, () => renameModel(model)),
+          pencilButton(model),
           actionButton(model.hidden ? 'Показать' : 'Скрыть', model.hidden ? 'Показать модель' : 'Скрыть модель', () => changeVisibility(model)),
           actionButton('Удалить', 'Удалить модель', () => deleteModel(model), false, 'danger'),
         );
@@ -201,6 +204,29 @@
       button.disabled = disabled;
       if (className) button.classList.add(className);
       button.addEventListener('click', onClick);
+      return button;
+    }
+
+    function pencilButton(model) {
+      const label = `Переименовать модель «${model.title}»`;
+      const button = actionButton('', label, () => renameModel(model));
+      button.classList.add('icon-button');
+      button.title = label;
+
+      const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      icon.setAttribute('viewBox', '0 0 24 24');
+      icon.setAttribute('fill', 'none');
+      icon.setAttribute('stroke', 'currentColor');
+      icon.setAttribute('stroke-width', '1.8');
+      icon.setAttribute('stroke-linecap', 'round');
+      icon.setAttribute('stroke-linejoin', 'round');
+      icon.setAttribute('aria-hidden', 'true');
+      for (const d of ['M12 20h9', 'M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4 11.5-11.5z']) {
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', d);
+        icon.append(path);
+      }
+      button.append(icon);
       return button;
     }
 
@@ -284,23 +310,34 @@
       const message = document.querySelector('#upload-message');
       message.textContent = '';
       if (!file) { message.textContent = 'Сначала выберите HTML-файл.'; return; }
-      if (file.size > 3 * 1024 * 1024) { message.textContent = 'Файл должен быть меньше 3 МБ.'; return; }
+      const [fileStart, fileEnd] = await Promise.all([
+        file.slice(0, 4096).text(),
+        file.slice(Math.max(0, file.size - 4096)).text(),
+      ]);
+      if (!/<\s*html(?:\s|>)/i.test(fileStart) || !/<\/\s*html\s*>/i.test(fileEnd)) {
+        message.textContent = 'В выбранном файле не найден HTML-документ модели.';
+        return;
+      }
 
       const submit = uploadForm.querySelector('button[type=submit]');
       submit.disabled = true;
       submit.textContent = 'Загрузка…';
       try {
-        const dataUrl = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = () => reject(reader.error);
-          reader.readAsDataURL(file);
+        const id = crypto.randomUUID();
+        const pathname = `models/${id}.html`;
+        const blob = await globalThis.uploadModelBlob(pathname, file, {
+          access: 'private',
+          contentType: 'text/html',
+          handleUploadUrl: '/api/admin-upload',
+          multipart: file.size >= 5 * 1024 * 1024,
+          onUploadProgress: ({ percentage }) => {
+            message.textContent = `Загрузка: ${Math.round(percentage)}%`;
+          },
         });
-        const content = String(dataUrl).split(',')[1];
-        await request('upload', {
+        await request('register-upload', {
+          pathname: blob.pathname,
           title: document.querySelector('#title').value,
           description: document.querySelector('#description').value,
-          content,
         });
         fileInput.value = '';
         uploadForm.reset();
@@ -308,7 +345,7 @@
         message.textContent = 'Модель опубликована и добавлена в каталог.';
         await loadModels();
       } catch (error) {
-        message.textContent = error.message === 'HTML_REQUIRED' ? 'Загрузите полноценный HTML-файл модели.' : 'Загрузка не удалась. Проверьте файл и попробуйте ещё раз.';
+        message.textContent = error.message === 'HTML_REQUIRED' ? 'Загрузите HTML-файл модели.' : 'Загрузка не удалась. Проверьте соединение и попробуйте ещё раз.';
       } finally {
         submit.disabled = false;
         submit.textContent = 'Опубликовать';
