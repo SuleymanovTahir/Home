@@ -2,6 +2,6 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "proxy": {
     "entrypoint": "proxy.js",
-    "matcher": ["/3D-.*\\.html"]
+    "matcher": ["/(3D-.*\\.html)"]
   }
 }
