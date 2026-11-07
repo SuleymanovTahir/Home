@@ -39,6 +39,7 @@ export default {
     try {
       const catalog = await readCatalog();
       if (body.action === 'upload') return uploadModel(catalog, body);
+      if (body.action === 'rename') return renameModel(catalog, body);
       if (body.action === 'toggle') return toggleModel(catalog, body);
       if (body.action === 'reorder') return reorderModels(catalog, body);
       if (body.action === 'delete') return removeModel(catalog, body);
@@ -132,6 +133,18 @@ async function toggleModel(catalog, body) {
   if (!model || typeof body.hidden !== 'boolean') return json({ error: 'MODEL_NOT_FOUND' }, 404);
 
   model.hidden = body.hidden;
+  await saveCatalog(catalog);
+  return json({ ok: true });
+}
+
+async function renameModel(catalog, body) {
+  const model = catalog.models.find((item) => item.id === body.id);
+  if (!model) return json({ error: 'MODEL_NOT_FOUND' }, 404);
+  if (typeof body.title !== 'string' || !body.title.trim() || body.title.trim().length > 100) {
+    return json({ error: 'INVALID_TITLE' }, 400);
+  }
+
+  model.title = body.title.trim();
   await saveCatalog(catalog);
   return json({ ok: true });
 }

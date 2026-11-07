@@ -183,6 +183,7 @@
         actions.append(
           actionButton('↑', 'Поднять выше', () => moveModel(index, -1), index === 0),
           actionButton('↓', 'Опустить ниже', () => moveModel(index, 1), index === models.length - 1),
+          actionButton('Переименовать', `Переименовать модель «${model.title}»`, () => renameModel(model)),
           actionButton(model.hidden ? 'Показать' : 'Скрыть', model.hidden ? 'Показать модель' : 'Скрыть модель', () => changeVisibility(model)),
           actionButton('Удалить', 'Удалить модель', () => deleteModel(model), false, 'danger'),
         );
@@ -208,6 +209,24 @@
         await request('toggle', { id: model.id, hidden: !model.hidden });
         await loadModels();
       } catch { document.querySelector('#list-message').textContent = 'Не удалось изменить видимость модели.'; }
+    }
+
+    async function renameModel(model) {
+      const title = prompt('Новое название модели:', model.title);
+      if (title === null) return;
+      const nextTitle = title.trim();
+      if (!nextTitle || nextTitle.length > 100) {
+        document.querySelector('#list-message').textContent = 'Название должно содержать от 1 до 100 символов.';
+        return;
+      }
+      if (nextTitle === model.title) return;
+      try {
+        await request('rename', { id: model.id, title: nextTitle });
+        document.querySelector('#list-message').textContent = 'Название модели изменено.';
+        await loadModels();
+      } catch {
+        document.querySelector('#list-message').textContent = 'Не удалось переименовать модель.';
+      }
     }
 
     async function moveModel(index, direction) {
