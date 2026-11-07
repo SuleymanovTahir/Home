@@ -7,7 +7,7 @@
 ## Однократная настройка Vercel
 
 1. В проекте `home-two-tau-26` откройте **Storage** и создайте подключённый к проекту **Vercel Blob** store с режимом доступа **Private**. Vercel подключит Blob credentials к проекту.
-2. В **Settings → Environment Variables** добавьте `ADMIN_PASSWORD` (случайный пароль длиной от 16 символов) и `SESSION_SECRET` (случайное значение длиной не менее 32 символов; сгенерируйте через `openssl rand -hex 32`). Добавьте их для Production.
+2. В **Settings → Environment Variables** добавьте `ADMIN_PASSWORD` (сгенерируйте случайное значение командой `openssl rand -hex 32`). Добавьте его для Production и храните в менеджере паролей.
 3. После сохранения переменных создайте новый Production deployment.
 4. Откройте `/admin.html`, войдите с `ADMIN_PASSWORD` и загружайте `.html`-модели размером до 3 МБ.
 

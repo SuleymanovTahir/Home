@@ -73,7 +73,7 @@
         <p>Это защищает загруженные файлы и позволяет сохранять каталог между деплоями.</p>
         <ol>
           <li>В Vercel откройте проект <strong>home-two-tau-26</strong> → <strong>Storage</strong> → создайте <strong>Blob store</strong> с доступом <strong>Private</strong> и подключите его к проекту.</li>
-          <li>В <strong>Settings → Environment Variables</strong> задайте <code>ADMIN_PASSWORD</code> (случайный пароль от 16 символов) и <code>SESSION_SECRET</code>. Сгенерировать SESSION_SECRET можно командой <code>openssl rand -hex 32</code>.</li>
+          <li>В <strong>Settings → Environment Variables</strong> задайте <code>ADMIN_PASSWORD</code>. Создайте случайное значение командой <code>openssl rand -hex 32</code> и сохраните его только в Vercel и своём менеджере паролей.</li>
           <li>Перезапустите Production deployment и войдите сюда с ADMIN_PASSWORD.</li>
         </ol>
         <p class="hint">После подключения модели будут публиковаться сразу, без ручного коммита или ожидания нового билда.</p>
