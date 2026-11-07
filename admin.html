@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#e9ecee">
+  <title>Управление моделями</title>
+  <style>
+    :root{color-scheme:light;--bg:#e9ecee;--panel:#fff;--fg:#1d2328;--muted:#5d6872;--line:#c5ccd3;--accent:#2f5d8a;--danger:#a33a32}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;padding:clamp(20px,5vw,56px);background:var(--bg);color:var(--fg);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    main{width:min(820px,100%);margin:0 auto}
+    header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}
+    h1{margin:0;font-size:clamp(26px,5vw,38px);letter-spacing:-.03em}
+    h2{margin:0 0 6px;font-size:21px}
+    p{margin:0;color:var(--muted)}
+    a{color:var(--accent);font-weight:600;text-decoration:none}
+    button,input{font:inherit}
+    button,.button{min-height:42px;padding:9px 14px;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--fg);font-weight:600;cursor:pointer}
+    button:hover,.button:hover{border-color:var(--accent);color:var(--accent)}
+    button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+    .primary{border-color:var(--accent);background:var(--accent);color:#fff}
+    .primary:hover{background:#244b70;color:#fff}
+    .danger{color:var(--danger)}
+    .card{padding:22px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+    .stack{display:grid;gap:14px}
+    .login{max-width:440px}
+    label{display:grid;gap:6px;font-weight:600}
+    input[type=password],input[type=text],input[type=file]{width:100%;min-height:42px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--fg)}
+    .hint{font-size:13px;line-height:1.45}
+    .message{min-height:22px;color:var(--danger);font-size:13px}
+    .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+    .upload{margin-bottom:20px}
+    .upload h2{margin-bottom:12px}
+    .upload-fields{display:grid;grid-template-columns:1fr 1fr auto;align-items:end;gap:10px;margin-top:14px}
+    .upload-fields[hidden]{display:none}
+    .models{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+    .model{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px;padding:15px;border:1px solid var(--line);border-radius:11px;background:var(--panel)}
+    .model[aria-hidden="true"]{opacity:.62}
+    .model-title{font-weight:600;overflow-wrap:anywhere}
+    .model-meta{margin-top:3px;color:var(--muted);font-size:12px}
+    .actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
+    .actions button{min-width:42px;padding:7px 10px}
+    .setup{border-color:#c7a958;background:#fff9e7}
+    .setup h2{font-size:18px}
+    .setup ol{padding-left:22px;color:var(--fg)}
+    .setup li+li{margin-top:8px}
+    code{padding:2px 5px;border-radius:4px;background:#0000000b;font-size:.9em}
+    @media(max-width:650px){body{padding:20px}.model{grid-template-columns:1fr}.actions{justify-content:flex-start}.upload-fields{grid-template-columns:1fr}.toolbar{align-items:flex-start}.card{padding:17px}}
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Управление моделями</h1>
+      <a href="./index.html">← Каталог</a>
+    </header>
+
+    <section class="card login stack" id="login-panel">
+      <div><h2>Вход владельца</h2><p>Войдите, чтобы редактировать каталог моделей.</p></div>
+      <form id="login-form" class="stack">
+        <label for="password">Пароль управления
+          <input id="password" name="password" type="password" autocomplete="current-password" required>
+        </label>
+        <button class="primary" type="submit">Войти</button>
+        <p class="message" id="login-message" role="alert"></p>
+      </form>
+    </section>
+
+    <section id="dashboard" hidden>
+      <div class="card setup" id="setup-guide" hidden>
+        <h2>Нужно один раз подключить хранилище</h2>
+        <p>Это защищает загруженные файлы и позволяет сохранять каталог между деплоями.</p>
+        <ol>
+          <li>В Vercel откройте проект <strong>home-two-tau-26</strong> → <strong>Storage</strong> → создайте <strong>Blob store</strong> с доступом <strong>Private</strong> и подключите его к проекту.</li>
+          <li>В <strong>Settings → Environment Variables</strong> задайте <code>ADMIN_PASSWORD</code> (случайный пароль от 16 символов) и <code>SESSION_SECRET</code>. Сгенерировать SESSION_SECRET можно командой <code>openssl rand -hex 32</code>.</li>
+          <li>Перезапустите Production deployment и войдите сюда с ADMIN_PASSWORD.</li>
+        </ol>
+        <p class="hint">После подключения модели будут публиковаться сразу, без ручного коммита или ожидания нового билда.</p>
+      </div>
+
+      <div class="toolbar">
+        <p id="count">Модели загружаются…</p>
+        <button id="logout" type="button">Выйти</button>
+      </div>
+      <section class="card upload">
+        <h2>Добавить модель</h2>
+        <p class="hint">Загрузите отдельный HTML-файл размером до 3 МБ. Он сразу появится в каталоге.</p>
+        <button class="primary" id="choose-file" type="button" style="margin-top:14px">Загрузить новую модель</button>
+        <input id="file" type="file" accept=".html,text/html" hidden>
+        <form id="upload-form" class="upload-fields" hidden>
+          <label>Название
+            <input id="title" type="text" maxlength="100" required>
+          </label>
+          <label>Краткое описание
+            <input id="description" type="text" maxlength="180" placeholder="Например: 2 этажа · кирпич">
+          </label>
+          <button class="primary" type="submit">Опубликовать</button>
+        </form>
+        <p class="message" id="upload-message" role="status"></p>
+      </section>
+
+      <ol class="models" id="models" aria-label="Все модели"></ol>
+      <p class="message" id="list-message" role="status"></p>
+    </section>
+  </main>
+
+  <script>
+    const loginPanel = document.querySelector('#login-panel');
+    const dashboard = document.querySelector('#dashboard');
+    const loginMessage = document.querySelector('#login-message');
+    const uploadForm = document.querySelector('#upload-form');
+    const fileInput = document.querySelector('#file');
+    let models = [];
+
+    async function request(action, data = {}) {
+      const response = await fetch('/api/admin', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, ...data }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw Object.assign(new Error(result.error || 'REQUEST_FAILED'), { status: response.status });
+      return result;
+    }
+
+    function setupMessage(error) {
+      if (error.message === 'STORAGE_NOT_CONFIGURED' || error.message === 'CATALOG_UNAVAILABLE') {
+        document.querySelector('#setup-guide').hidden = false;
+        document.querySelector('#count').textContent = 'Ожидает настройки хранилища';
+        document.querySelector('#models').replaceChildren();
+        return true;
+      }
+      return false;
+    }
+
+    async function loadModels() {
+      try {
+        const response = await fetch('/api/admin', { credentials: 'same-origin', cache: 'no-store' });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw Object.assign(new Error(result.error || 'REQUEST_FAILED'), { status: response.status });
+        models = result.models;
+        loginPanel.hidden = true;
+        dashboard.hidden = false;
+        document.querySelector('#setup-guide').hidden = true;
+        renderModels();
+      } catch (error) {
+        if (setupMessage(error)) {
+          loginPanel.hidden = true;
+          dashboard.hidden = false;
+          document.querySelector('#logout').hidden = false;
+          return;
+        }
+        if (error.status === 401) {
+          dashboard.hidden = true;
+          loginPanel.hidden = false;
+          return;
+        }
+        document.querySelector('#list-message').textContent = 'Не удалось загрузить список. Обновите страницу.';
+      }
+    }
+
+    function renderModels() {
+      const list = document.querySelector('#models');
+      document.querySelector('#count').textContent = `Всего моделей: ${models.length}`;
+      list.replaceChildren(...models.map((model, index) => {
+        const item = document.createElement('li');
+        item.className = 'model';
+        item.setAttribute('aria-hidden', String(Boolean(model.hidden)));
+
+        const info = document.createElement('div');
+        const title = document.createElement('div');
+        title.className = 'model-title';
+        title.textContent = model.title;
+        const meta = document.createElement('div');
+        meta.className = 'model-meta';
+        meta.textContent = `${model.hidden ? 'Скрыта' : 'Опубликована'} · ${model.storagePath ? 'загруженный файл' : 'исходная модель'}`;
+        info.append(title, meta);
+
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+        actions.append(
+          actionButton('↑', 'Поднять выше', () => moveModel(index, -1), index === 0),
+          actionButton('↓', 'Опустить ниже', () => moveModel(index, 1), index === models.length - 1),
+          actionButton(model.hidden ? 'Показать' : 'Скрыть', model.hidden ? 'Показать модель' : 'Скрыть модель', () => changeVisibility(model)),
+          actionButton('Удалить', 'Удалить модель', () => deleteModel(model), false, 'danger'),
+        );
+
+        item.append(info, actions);
+        return item;
+      }));
+    }
+
+    function actionButton(text, label, onClick, disabled = false, className = '') {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = text;
+      button.setAttribute('aria-label', label);
+      button.disabled = disabled;
+      if (className) button.classList.add(className);
+      button.addEventListener('click', onClick);
+      return button;
+    }
+
+    async function changeVisibility(model) {
+      try {
+        await request('toggle', { id: model.id, hidden: !model.hidden });
+        await loadModels();
+      } catch { document.querySelector('#list-message').textContent = 'Не удалось изменить видимость модели.'; }
+    }
+
+    async function moveModel(index, direction) {
+      const next = index + direction;
+      if (next < 0 || next >= models.length) return;
+      const ids = models.map((model) => model.id);
+      [ids[index], ids[next]] = [ids[next], ids[index]];
+      try {
+        await request('reorder', { ids });
+        await loadModels();
+      } catch { document.querySelector('#list-message').textContent = 'Не удалось изменить порядок моделей.'; }
+    }
+
+    async function deleteModel(model) {
+      if (!confirm(`Удалить модель «${model.title}»?`)) return;
+      try {
+        await request('delete', { id: model.id });
+        await loadModels();
+      } catch { document.querySelector('#list-message').textContent = 'Не удалось удалить модель.'; }
+    }
+
+    document.querySelector('#login-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      loginMessage.textContent = '';
+      try {
+        await request('login', { password: document.querySelector('#password').value });
+        document.querySelector('#password').value = '';
+        await loadModels();
+      } catch (error) {
+        const messages = {
+          ADMIN_NOT_CONFIGURED: 'Пароль владельца ещё не настроен в Vercel.',
+          INVALID_PASSWORD: 'Неверный пароль.',
+          TOO_MANY_ATTEMPTS: 'Слишком много попыток. Подождите 15 минут.',
+        };
+        loginMessage.textContent = messages[error.message] || 'Не удалось войти.';
+      }
+    });
+
+    document.querySelector('#logout').addEventListener('click', async () => {
+      try { await request('logout'); } finally { dashboard.hidden = true; loginPanel.hidden = false; }
+    });
+
+    document.querySelector('#choose-file').addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files?.[0];
+      if (!file) return;
+      document.querySelector('#title').value = file.name.replace(/\.html?$/i, '').replace(/[-_]+/g, ' ');
+      uploadForm.hidden = false;
+      document.querySelector('#title').focus();
+    });
+
+    uploadForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const file = fileInput.files?.[0];
+      const message = document.querySelector('#upload-message');
+      message.textContent = '';
+      if (!file) { message.textContent = 'Сначала выберите HTML-файл.'; return; }
+      if (file.size > 3 * 1024 * 1024) { message.textContent = 'Файл должен быть меньше 3 МБ.'; return; }
+
+      const submit = uploadForm.querySelector('button[type=submit]');
+      submit.disabled = true;
+      submit.textContent = 'Загрузка…';
+      try {
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(file);
+        });
+        const content = String(dataUrl).split(',')[1];
+        await request('upload', {
+          title: document.querySelector('#title').value,
+          description: document.querySelector('#description').value,
+          content,
+        });
+        fileInput.value = '';
+        uploadForm.reset();
+        uploadForm.hidden = true;
+        message.textContent = 'Модель опубликована и добавлена в каталог.';
+        await loadModels();
+      } catch (error) {
+        message.textContent = error.message === 'HTML_REQUIRED' ? 'Загрузите полноценный HTML-файл модели.' : 'Загрузка не удалась. Проверьте файл и попробуйте ещё раз.';
+      } finally {
+        submit.disabled = false;
+        submit.textContent = 'Опубликовать';
+      }
+    });
+
+    loadModels();
+  </script>
+</body>
+</html>

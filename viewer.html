@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#e9ecee">
+  <title>3D-модель дома</title>
+  <style>
+    :root{color-scheme:light;--bg:#e9ecee;--fg:#1d2328;--muted:#5d6872;--line:#c5ccd3;--accent:#2f5d8a}
+    *{box-sizing:border-box}
+    html,body{width:100%;height:100%;margin:0}
+    body{display:flex;flex-direction:column;background:var(--bg);color:var(--fg);font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    header{min-height:54px;padding:8px 16px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--line);background:#fff}
+    a{color:var(--accent);font-weight:600;text-decoration:none}
+    h1{min-width:0;margin:0;overflow:hidden;font-size:15px;text-overflow:ellipsis;white-space:nowrap}
+    #status{margin-left:auto;color:var(--muted);font-size:12px}
+    iframe{width:100%;height:calc(100% - 54px);flex:1;border:0;background:#fff}
+  </style>
+</head>
+<body>
+  <header>
+    <a href="./index.html">← Все модели</a>
+    <h1 id="title">3D-модель дома</h1>
+    <span id="status" role="status"></span>
+  </header>
+  <iframe id="model" title="3D-модель дома" sandbox="allow-scripts allow-pointer-lock" referrerpolicy="no-referrer"></iframe>
+  <script>
+    const id = new URLSearchParams(location.search).get('id');
+    const status = document.querySelector('#status');
+    const frame = document.querySelector('#model');
+
+    if (!id) {
+      status.textContent = 'Модель не найдена';
+    } else {
+      fetch('/api/models', { cache: 'no-store' })
+        .then((response) => response.ok ? response.json() : Promise.reject())
+        .then(({ models }) => {
+          const model = models.find((item) => item.id === id);
+          if (!model) throw new Error('NOT_FOUND');
+          document.querySelector('#title').textContent = model.title;
+          frame.src = `/api/model?id=${encodeURIComponent(id)}`;
+        })
+        .catch(() => { status.textContent = 'Модель скрыта или удалена'; });
+    }
+
+    frame.addEventListener('error', () => { status.textContent = 'Не удалось открыть модель'; });
+  </script>
+</body>
+</html>
