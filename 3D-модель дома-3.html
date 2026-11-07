@@ -1,5 +1,5 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
-<title>3D-модель дома</title>
+<title>3D-модель дома — вариант 2</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -47,18 +47,28 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .tp button{font:inherit;font-size:13px;color:var(--fg);background:none;border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer}
 .tp button:hover{border-color:var(--accent)}
 .room{position:absolute;top:12px;left:50%;transform:translateX(-50%);padding:7px 14px;font:13px var(--mono);white-space:nowrap}
+.page-switch{position:absolute;top:62px;right:var(--gutr);z-index:6;display:flex;gap:4px;padding:4px;pointer-events:auto}
+.page-switch a{display:block;padding:6px 9px;border-radius:6px;color:var(--fg);font-size:12px;text-decoration:none;white-space:nowrap}
+.page-switch a:hover{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.page-switch a[aria-current="page"]{background:var(--accent);color:var(--accent-fg)}
 #loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--muted);font:13px var(--mono);z-index:5}
 @media (max-width:640px){
   .title{padding:8px 12px}.title h1{font-size:15px}
   .tod{top:auto;bottom:calc(max(14px,env(safe-area-inset-bottom,0px)) + 56px);right:var(--gutr)}
   .panel{bottom:calc(max(14px,env(safe-area-inset-bottom,0px)) + 100px)}
-  .room{top:64px}
+  .page-switch{top:64px}
+  .room{top:112px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 <div id="app">
   <canvas id="c" tabindex="0" aria-label="3D-модель дома"></canvas>
   <header class="card title"><h1>Дом 12 × 8 м</h1><p>2 этажа + мансарда · навес-балкон 12 × 3 м · кирпич</p></header>
+  <nav class="card page-switch" aria-label="Страницы проекта">
+    <a href="./index.html">Все модели</a>
+    <a href="./3D-%D0%BC%D0%BE%D0%B4%D0%B5%D0%BB%D1%8C%20%D0%B4%D0%BE%D0%BC%D0%B0-2.html">Вариант 1</a>
+    <a href="./3D-%D0%BC%D0%BE%D0%B4%D0%B5%D0%BB%D1%8C%20%D0%B4%D0%BE%D0%BC%D0%B0-3.html" aria-current="page">Вариант 2</a>
+  </nav>
   <div class="tod seg" role="group" aria-label="Время суток">
     <button type="button" data-tod="day" aria-pressed="true">День</button>
     <button type="button" data-tod="eve" aria-pressed="false">Вечер</button>
